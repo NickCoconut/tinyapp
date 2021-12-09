@@ -4,12 +4,13 @@ const PORT = 8080;
 
 app.set('view engine', 'ejs');
 
+const bcrypt = require('bcryptjs'); 
+
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
-
 
 function generateRandomString() {
   const shortURL = Math.random().toString(36).substr(2, 6);
@@ -69,9 +70,18 @@ app.get('/login', (req, res) => {
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  const user = authenticateUser(email, password, usersDb);
+
+  if(!email || !password) {
+    return res.status(400).send('Please enter email or password')
+  };
+
+  const user = findUserEmail(email, usersDb);
+
+  if(!user) {
+    return res.status(400).send('email does not exist')
+  }
   
-  if(user) {
+  if(user && bcrypt.compareSync(password, user.password)) {
       res.cookie('user_id', user.id);
       res.redirect('/urls');
       return;
@@ -91,12 +101,11 @@ app.get('/urls', (req, res) => {
   const userId = req.cookies['user_id']
 
   const userUrls = urlsForUser(userId, urlDatabase)
-  console.log(urlDatabase)
   const templateVars = { 
       urls: userUrls,
       user: usersDb[userId]
     };
-    console.log(templateVars)
+    
     if (userId) {
   res.render('urls_index', templateVars);
     }
@@ -202,26 +211,24 @@ app.get('/register', (req, res) => {
 app.post('/register', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  const user = findUserEmail(email, usersDb);
 
-  //if e-mail or password is empty
-  if(email.length === 0 || password.length === 0) {
-    res.status(400).send('Please enter email');
-    return;
+  if(!email || !password) {
+    return res.status(400).send('Please enter email');
   };
 
-  // ensure the user is not in the db already
-    if(user) {
-      res.status(400).send('Sorry, user already exists!');
-      return;
-    }
+  const user = findUserEmail(email, usersDb);
 
-    const userId = Math.random().toString(36).substr(2, 8);
+  if(user) {
+    return res.status(400).send('Sorry, user already exists!');
+  }
+
+  const hanshedPassword = bcrypt.hashSync(password, 10);
+  const userId = Math.random().toString(36).substr(2, 8);
 
     const newUser ={
       id: userId,
       email,
-      password
+      password: hanshedPassword
     }
   //add new user to db
     usersDb[userId] = newUser;
