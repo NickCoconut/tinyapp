@@ -20,6 +20,7 @@
     <%- include('partials/_header') %>
     <main style="margin: 1em">
       <h3>My URLs</h3>
+      <% if (user) { %>
       <table class="table">
         <thead>
           <tr>
@@ -33,7 +34,7 @@
           <% for(let url in urls) { %>
           <tr>
             <td><%= url %></td>
-            <td><%= urls[url] %></td>
+            <td><%= urls[url].longURL %></td>
             <td><a class="btn btn-primary" href="/urls/<%= url %>">Edit</a></td>
             <td>
               <form method="POST" action="/urls/<%= url %>/delete">
@@ -44,6 +45,9 @@
           <% } %>
         </tbody>
       </table>
+      <% } else { %>
+      <h5 class="btn btn-primary">please login or register</h5>
+      <% } %>
     </main>
     <!-- Bootstrap JS -->
     <script
