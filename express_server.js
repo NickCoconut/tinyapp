@@ -134,7 +134,7 @@ app.post("/urls", (req, res) => {
       longURL: req.body.longURL,
       userId: req.session.user_id,
     };
-    res.redirect("/urls/");
+    res.redirect('/urls/' + shortURL);
     return;
   }
   res.send("Please log in");
@@ -143,17 +143,24 @@ app.post("/urls", (req, res) => {
 
 //Show shortURL
 app.get("/urls/:shortURL", (req, res) => {
-  if (urlDatabase[req.params.shortURL]) {
-    const userId = req.session.user_id;
+  const shortURL = req.params.shortURL;
+  const userId = req.session.user_id;
+  const userUrls = urlsForUser(userId, urlDatabase);
+  
+  if (!urlDatabase[shortURL]) {
+   res.status(404).send("ShortURL does not exist");
+  } else if (!userId || !userUrls[shortURL]) {
+    res.status(401).send("You don't own the URL");
+  } else {
     const templateVars = {
-      shortURL: req.params.shortURL,
-      longURL: urlDatabase[req.params.shortURL].longURL,
-      userUrls: urlDatabase[req.params.shortURL].userID,
+      shortURL,
+      longURL: urlDatabase[shortURL].longURL,
+      userUrls: urlDatabase[shortURL].userID,
       user: usersDb[userId],
     };
-    res.render("urls_show", templateVars);
+    return res.render("urls_show", templateVars);
   }
-});
+  });
 
 // //update longURL
 app.post("/urls/:shortURL", (req, res) => {
@@ -171,11 +178,13 @@ app.post("/urls/:shortURL", (req, res) => {
 app.get("/u/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   if (urlDatabase[shortURL]) {
-    const longURL = urlDatabase[shortURL].longURL;
+    let longURL = urlDatabase[shortURL].longURL;
     if (longURL === undefined) {
       res.status(302);
       return;
     }
+    const regex = /^http(s)?:\/\//;
+    longURL = longURL.match(regex) ? longURL : `http://${longURL}`
     res.redirect(longURL);
     return;
   }
